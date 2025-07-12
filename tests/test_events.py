@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from pumpdotfun_sdk.events import EventManager
 from pumpdotfun_sdk.types import PumpFunEventType, CreateEvent, TradeEvent, CompleteEvent
-from solders.pubkey import Pubkey as PublicKey
+from solana.publickey import PublicKey
 
 
 class TestEventManager(unittest.TestCase):

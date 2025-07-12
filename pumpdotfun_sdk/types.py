@@ -5,7 +5,7 @@ Type definitions for PumpDotFun SDK.
 from dataclasses import dataclass
 from typing import Optional, Dict, Any, Callable
 from enum import Enum
-from solders.pubkey import Pubkey as PublicKey
+from solana.publickey import PublicKey
 
 
 @dataclass

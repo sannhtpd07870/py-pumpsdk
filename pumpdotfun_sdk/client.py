@@ -7,13 +7,10 @@ import logging
 from typing import Optional, Dict, Any
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment
-from solders.keypair import Keypair
-from solders.pubkey import Pubkey as PublicKey
-from solders.transaction import Transaction
-from solana.system_program import create_account, CreateAccountParams
-from solana.spl.token.instructions import create_initialize_mint_instruction, create_create_associated_token_account_instruction
-from solana.spl.token.constants import TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
-from spl.token.instructions import get_associated_token_address
+from solana.keypair import Keypair
+from solana.publickey import PublicKey
+from solana.transaction import Transaction
+from solana.system_program import create_account
 
 from .types import (
     CreateTokenMetadata,

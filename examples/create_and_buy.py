@@ -8,8 +8,8 @@ and immediately purchase some tokens.
 import asyncio
 import os
 from dotenv import load_dotenv
-from solders.keypair import Keypair
-from solders.pubkey import Pubkey
+from solana.keypair import Keypair
+from solana.publickey import PublicKey
 
 # Load environment variables
 load_dotenv()
@@ -47,8 +47,8 @@ async def create_and_buy_example():
     creator = Keypair()
     mint = Keypair()
     
-    print(f"Creator public key: {creator.pubkey()}")
-    print(f"Mint public key: {mint.pubkey()}")
+    print(f"Creator public key: {creator.public_key}")
+    print(f"Mint public key: {mint.public_key}")
     
     # Define token metadata
     print("📝 Setting up token metadata...")

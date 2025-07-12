@@ -7,7 +7,7 @@ import logging
 from typing import Dict, Callable, Any, Optional, List
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.websocket_api import connect
-from solders.pubkey import Pubkey as PublicKey
+from solana.publickey import PublicKey
 from .types import PumpFunEventType, CreateEvent, TradeEvent, CompleteEvent, EventCallback
 from .utils import PumpFunError
 

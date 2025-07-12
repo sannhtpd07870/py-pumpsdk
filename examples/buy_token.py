@@ -8,8 +8,8 @@ PumpFun token using the bonding curve mechanism.
 import asyncio
 import os
 from dotenv import load_dotenv
-from solders.keypair import Keypair
-from solders.pubkey import Pubkey
+from solana.keypair import Keypair
+from solana.publickey import PublicKey
 
 # Load environment variables
 load_dotenv()
@@ -46,13 +46,13 @@ async def buy_token_example():
     # Create buyer keypair
     print("🔑 Generating buyer keypair...")
     buyer = Keypair()
-    print(f"Buyer public key: {buyer.pubkey()}")
+    print(f"Buyer public key: {buyer.public_key}")
     
     # Token mint address (replace with actual token mint)
     # For this example, we'll use a placeholder address
     # In practice, you would get this from a token creation or discovery
     mint_address = "11111111111111111111111111111112"  # Placeholder
-    mint = Pubkey.from_string(mint_address)
+    mint = PublicKey(mint_address)
     
     print(f"🏷️  Target token mint: {mint}")
     
@@ -270,7 +270,7 @@ async def demonstrate_error_scenarios():
     
     sdk = PumpDotFunSDK("https://api.devnet.solana.com")
     buyer = Keypair()
-    mint = Pubkey.from_string("11111111111111111111111111111112")
+    mint = PublicKey("11111111111111111111111111111112")
     
     error_scenarios = [
         ("Zero purchase amount", 0.0, 500),

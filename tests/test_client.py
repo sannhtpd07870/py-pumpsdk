@@ -5,8 +5,8 @@ Unit tests for PumpDotFun SDK.
 import unittest
 import asyncio
 from unittest.mock import Mock, AsyncMock, patch
-from solders.keypair import Keypair
-from solders.pubkey import Pubkey as PublicKey
+from solana.keypair import Keypair
+from solana.publickey import PublicKey
 
 import sys
 import os

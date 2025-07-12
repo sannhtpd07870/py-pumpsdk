@@ -5,7 +5,7 @@ Global account management for PumpDotFun SDK.
 import struct
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
-from solders.pubkey import Pubkey as PublicKey
+from solana.publickey import PublicKey
 from solana.rpc.async_api import AsyncClient
 from .utils import PumpFunError, NetworkError
 

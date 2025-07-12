@@ -70,8 +70,7 @@ pip install -e .
 
 The SDK requires the following main dependencies:
 
-- `solana>=0.36.0` - Solana Python client
-- `solders>=0.23.0` - High-performance Solana toolkit
+- `solana==0.28.1` - Solana Python client (stable version for reliability)
 - `websockets` - WebSocket client for real-time events
 - `httpx` - HTTP client for RPC calls
 
@@ -83,7 +82,7 @@ The SDK requires the following main dependencies:
 import asyncio
 from pumpdotfun_sdk import PumpDotFunSDK
 from pumpdotfun_sdk.types import CreateTokenMetadata
-from solders.keypair import Keypair
+from solana.keypair import Keypair
 
 # Initialize the SDK
 sdk = PumpDotFunSDK(
@@ -318,7 +317,7 @@ The SDK includes comprehensive examples demonstrating various use cases:
 import asyncio
 from pumpdotfun_sdk import PumpDotFunSDK
 from pumpdotfun_sdk.types import CreateTokenMetadata
-from solders.keypair import Keypair
+from solana.keypair import Keypair
 
 async def create_token_example():
     sdk = PumpDotFunSDK("https://api.devnet.solana.com")
@@ -353,8 +352,8 @@ asyncio.run(create_token_example())
 # examples/buy_token.py
 import asyncio
 from pumpdotfun_sdk import PumpDotFunSDK
-from solders.keypair import Keypair
-from solders.pubkey import Pubkey
+from solana.keypair import Keypair
+from solana.publickey import PublicKey
 
 async def buy_token_example():
     sdk = PumpDotFunSDK("https://api.devnet.solana.com")

@@ -10,6 +10,7 @@ from typing import Dict, Any, Optional
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment as SolanaCommitment
 from .types import CreateTokenMetadata, LAMPORTS_PER_SOL
+import asyncio
 
 logger = logging.getLogger(__name__)
 
