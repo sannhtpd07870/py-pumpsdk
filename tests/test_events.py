@@ -277,8 +277,8 @@ class TestEventProcessing(unittest.TestCase):
         self.callback_slot = None
         self.callback_signature = None
     
-    def test_callback(self, event, slot, signature):
-        """Test callback function."""
+    def record_callback(self, event, slot, signature):
+        """Helper callback for event processing tests."""
         self.callback_called = True
         self.callback_event = event
         self.callback_slot = slot
@@ -289,7 +289,7 @@ class TestEventProcessing(unittest.TestCase):
         # Add listener
         listener_id = self.event_manager.add_listener(
             PumpFunEventType.CREATE_EVENT,
-            self.test_callback
+            self.record_callback
         )
         
         # Mock message processing
@@ -321,7 +321,7 @@ class TestEventProcessing(unittest.TestCase):
         # Add listener for different event type
         self.event_manager.add_listener(
             PumpFunEventType.TRADE_EVENT,
-            self.test_callback
+            self.record_callback
         )
         
         # Mock message processing
