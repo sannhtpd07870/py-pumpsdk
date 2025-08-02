@@ -4,6 +4,7 @@ Event handling for PumpDotFun SDK.
 
 import asyncio
 import logging
+import inspect
 from typing import Dict, Callable, Any, Optional, List
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.websocket_api import connect
@@ -94,9 +95,17 @@ class EventManager:
         
         if self.listen_task:
             self.listen_task.cancel()
-            
+
         if self.websocket_connection:
-            asyncio.create_task(self.websocket_connection.close())
+            close_method = self.websocket_connection.close
+            if inspect.iscoroutinefunction(close_method):
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(close_method())
+                except RuntimeError:
+                    asyncio.run(close_method())
+            else:
+                close_method()
             
         logger.info("Stopped listening for events")
     
