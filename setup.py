@@ -13,12 +13,12 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 setup(
     name="pumpdotfun-sdk-py",
     version="1.0.0",
-    author="Manus AI",
-    author_email="info@manus.ai",
+    author="NHTS",
+    author_email="nguyen.h.thaisan@gmail.com",
     description="Python SDK for interacting with PumpFun protocol on Solana",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/manus-ai/pumpdotfun-sdk-py",
+    url="https://github.com/sannhtpd07870/py-pumpsdk",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",

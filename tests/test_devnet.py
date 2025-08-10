@@ -17,6 +17,7 @@ class TestDevnetConnectivity(unittest.TestCase):
         async def run_test():
             client = AsyncClient("https://api.devnet.solana.com")
             resp = await client.get_balance(PublicKey(DEVNET_PUBLIC_KEY))
+            print(f"Balance for {DEVNET_PUBLIC_KEY}: {resp.value} lamports")
             await client.close()
             return resp.value
 

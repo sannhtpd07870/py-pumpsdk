@@ -52,7 +52,7 @@ class TestPumpDotFunSDK(unittest.IsolatedAsyncioTestCase):
         listener_id = self.sdk.add_event_listener(
             PumpFunEventType.TRADE_EVENT,
             test_callback
-        )
+        )test_create_and_buy_success
         self.assertIsInstance(listener_id, int)
         
         # Remove listener
