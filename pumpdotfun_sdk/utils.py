@@ -126,8 +126,11 @@ async def wait_for_confirmation(
                 status = response.value[0]
                 confirm_status = getattr(status, "confirmation_status", None)
                 if confirm_status:
-                    # Support both string statuses and objects with `.value`
-                    confirm_status = getattr(confirm_status, "value", confirm_status)
+                    if isinstance(confirm_status, str):
+                        confirm_status = confirm_status.lower()
+                    else:
+                        text = str(confirm_status)
+                        confirm_status = text.split(".")[-1].lower()
                     try:
                         levels = ["processed", "confirmed", "finalized"]
                         status_level = levels.index(confirm_status)
@@ -138,7 +141,6 @@ async def wait_for_confirmation(
                         logger.warning(
                             f"Unknown confirmation status: {confirm_status}"
                         )
-                    
         except Exception as e:
             logger.warning(f"Error checking transaction status: {e}")
             
