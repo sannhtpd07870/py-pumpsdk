@@ -141,7 +141,6 @@ async def wait_for_confirmation(
                         logger.warning(
                             f"Unknown confirmation status: {confirm_status}"
                         )
-                    
         except Exception as e:
             logger.warning(f"Error checking transaction status: {e}")
             
