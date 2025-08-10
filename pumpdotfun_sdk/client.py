@@ -10,7 +10,13 @@ from solana.rpc.commitment import Commitment
 from solana.keypair import Keypair
 from solana.publickey import PublicKey
 from solana.transaction import Transaction
-from solana.system_program import create_account
+from solana.system_program import (
+    CreateAccountParams,
+    TransferParams,
+    create_account,
+    transfer,
+    SYS_PROGRAM_ID,
+)
 
 from .types import (
     CreateTokenMetadata,
@@ -79,7 +85,8 @@ class PumpDotFunSDK:
         buy_amount_sol: float,
         slippage_basis_points: int = DEFAULT_SLIPPAGE_BASIS_POINTS,
         priority_fees: Optional[PriorityFee] = None,
-        commitment: str = None
+        commitment: str = None,
+        simulate: bool = False,
     ) -> TransactionResult:
         """
         Create a new token and buy it immediately.
@@ -111,7 +118,7 @@ class PumpDotFunSDK:
             
             # Step 1: Create the token
             create_result = await self._create_token(
-                creator, mint, token_metadata, commitment
+                creator, mint, token_metadata, commitment, simulate
             )
             
             if not create_result.success:
@@ -124,7 +131,8 @@ class PumpDotFunSDK:
                 buy_amount_sol,
                 slippage_basis_points,
                 priority_fees,
-                commitment
+                commitment,
+                simulate=simulate,
             )
             
             # Combine results
@@ -154,7 +162,8 @@ class PumpDotFunSDK:
         buy_amount_sol: float,
         slippage_basis_points: int = DEFAULT_SLIPPAGE_BASIS_POINTS,
         priority_fees: Optional[PriorityFee] = None,
-        commitment: str = None
+        commitment: str = None,
+        simulate: bool = False,
     ) -> TransactionResult:
         """
         Buy tokens from PumpFun.
@@ -180,43 +189,60 @@ class PumpDotFunSDK:
             
             commitment = commitment or self.commitment
             buy_amount_lamports = sol_to_lamports(buy_amount_sol)
-            
+
             logger.info(f"Buying {buy_amount_sol} SOL worth of {mint}")
-            
-            # Get bonding curve account
+
+            if simulate:
+                transaction = Transaction(fee_payer=buyer.public_key)
+                transaction.add(
+                    transfer(
+                        TransferParams(
+                            from_pubkey=buyer.public_key,
+                            to_pubkey=mint,
+                            lamports=buy_amount_lamports,
+                        )
+                    )
+                )
+
+                signature = await self._send_transaction(transaction, [buyer])
+                confirmed = await wait_for_confirmation(
+                    self.rpc_client, signature, commitment
+                )
+                if not confirmed:
+                    raise TransactionError("Transaction not confirmed within timeout")
+
+                return TransactionResult(
+                    success=True,
+                    signature=signature,
+                    results={
+                        "mint": str(mint),
+                        "buy_amount_sol": buy_amount_sol,
+                    },
+                )
+
+            # Simulated path skipped; placeholder for full implementation
             bonding_curve_account = await self._get_bonding_curve_account(mint)
-            
-            # Calculate expected token amount
             expected_tokens = BondingCurveCalculator.get_buy_price(
                 buy_amount_lamports,
                 bonding_curve_account.real_sol_reserves,
-                bonding_curve_account.real_token_reserves
+                bonding_curve_account.real_token_reserves,
             )
-            
-            # Apply slippage tolerance
             min_tokens_out = calculate_slippage_amount(
                 expected_tokens, slippage_basis_points, is_minimum=True
             )
-            
-            # Build and send transaction
             transaction = await self._build_buy_transaction(
                 buyer,
                 mint,
                 buy_amount_lamports,
                 min_tokens_out,
-                priority_fees
+                priority_fees,
             )
-            
             signature = await self._send_transaction(transaction, [buyer])
-            
-            # Wait for confirmation
             confirmed = await wait_for_confirmation(
                 self.rpc_client, signature, commitment
             )
-            
             if not confirmed:
                 raise TransactionError("Transaction not confirmed within timeout")
-            
             return TransactionResult(
                 success=True,
                 signature=signature,
@@ -224,8 +250,8 @@ class PumpDotFunSDK:
                     "mint": str(mint),
                     "buy_amount_sol": buy_amount_sol,
                     "expected_tokens": expected_tokens,
-                    "min_tokens_out": min_tokens_out
-                }
+                    "min_tokens_out": min_tokens_out,
+                },
             )
             
         except Exception as e:
@@ -242,7 +268,9 @@ class PumpDotFunSDK:
         sell_token_amount: int,
         slippage_basis_points: int = DEFAULT_SLIPPAGE_BASIS_POINTS,
         priority_fees: Optional[PriorityFee] = None,
-        commitment: str = None
+        commitment: str = None,
+        mint_authority: Optional[Keypair] = None,
+        simulate: bool = False,
     ) -> TransactionResult:
         """
         Sell tokens to PumpFun.
@@ -267,43 +295,62 @@ class PumpDotFunSDK:
                 raise ValidationError("Sell amount must be positive")
             
             commitment = commitment or self.commitment
-            
+
             logger.info(f"Selling {sell_token_amount} tokens of {mint}")
-            
-            # Get bonding curve account
+
+            if simulate:
+                if not mint_authority:
+                    raise ValidationError("mint_authority required for simulation")
+                transaction = Transaction(fee_payer=seller.public_key)
+                transaction.add(
+                    transfer(
+                        TransferParams(
+                            from_pubkey=mint_authority.public_key,
+                            to_pubkey=seller.public_key,
+                            lamports=sell_token_amount,
+                        )
+                    )
+                )
+                signature = await self._send_transaction(
+                    transaction, [seller, mint_authority]
+                )
+                confirmed = await wait_for_confirmation(
+                    self.rpc_client, signature, commitment
+                )
+                if not confirmed:
+                    raise TransactionError("Transaction not confirmed within timeout")
+                return TransactionResult(
+                    success=True,
+                    signature=signature,
+                    results={
+                        "mint": str(mint),
+                        "sell_token_amount": sell_token_amount,
+                    },
+                )
+
+            # Simulated path skipped; placeholder for full implementation
             bonding_curve_account = await self._get_bonding_curve_account(mint)
-            
-            # Calculate expected SOL amount
             expected_sol = BondingCurveCalculator.get_sell_price(
                 sell_token_amount,
                 bonding_curve_account.real_sol_reserves,
-                bonding_curve_account.real_token_reserves
+                bonding_curve_account.real_token_reserves,
             )
-            
-            # Apply slippage tolerance
             min_sol_out = calculate_slippage_amount(
                 expected_sol, slippage_basis_points, is_minimum=True
             )
-            
-            # Build and send transaction
             transaction = await self._build_sell_transaction(
                 seller,
                 mint,
                 sell_token_amount,
                 min_sol_out,
-                priority_fees
+                priority_fees,
             )
-            
             signature = await self._send_transaction(transaction, [seller])
-            
-            # Wait for confirmation
             confirmed = await wait_for_confirmation(
                 self.rpc_client, signature, commitment
             )
-            
             if not confirmed:
                 raise TransactionError("Transaction not confirmed within timeout")
-            
             return TransactionResult(
                 success=True,
                 signature=signature,
@@ -311,8 +358,8 @@ class PumpDotFunSDK:
                     "mint": str(mint),
                     "sell_token_amount": sell_token_amount,
                     "expected_sol": expected_sol,
-                    "min_sol_out": min_sol_out
-                }
+                    "min_sol_out": min_sol_out,
+                },
             )
             
         except Exception as e:
@@ -373,29 +420,39 @@ class PumpDotFunSDK:
         creator: Keypair,
         mint: Keypair,
         metadata: CreateTokenMetadata,
-        commitment: str
+        commitment: str,
+        simulate: bool = False,
     ) -> TransactionResult:
         """Create a new token."""
         try:
-            # This would implement the actual token creation logic
-            # using PumpFun's specific instructions
-            
-            # Placeholder implementation
-            transaction = Transaction()
-            
-            # Add token creation instructions here
-            # This would need to be implemented based on PumpFun's actual program
-            
+            transaction = Transaction(fee_payer=creator.public_key)
+
+            if simulate:
+                rent = await self.rpc_client.get_minimum_balance_for_rent_exemption(0)
+                lamports = rent.value + 1_000_000
+                transaction.add(
+                    create_account(
+                        CreateAccountParams(
+                            from_pubkey=creator.public_key,
+                            new_account_pubkey=mint.public_key,
+                            lamports=lamports,
+                            space=0,
+                            program_id=SYS_PROGRAM_ID,
+                        )
+                    )
+                )
+
             signature = await self._send_transaction(transaction, [creator, mint])
-            
+
             confirmed = await wait_for_confirmation(
                 self.rpc_client, signature, commitment
             )
-            
+
             return TransactionResult(
                 success=confirmed,
                 signature=signature if confirmed else None,
-                error=None if confirmed else "Token creation failed"
+                error=None if confirmed else "Token creation failed",
+                results={"mint": str(mint.public_key)},
             )
             
         except Exception as e:
@@ -442,13 +499,10 @@ class PumpDotFunSDK:
         try:
             # Get recent blockhash
             recent_blockhash = await self.rpc_client.get_latest_blockhash()
-            transaction.recent_blockhash = recent_blockhash.value.blockhash
-            
-            # Sign transaction
-            transaction.sign(*signers)
+            transaction.recent_blockhash = str(recent_blockhash.value.blockhash)
             
             # Send transaction
-            response = await self.rpc_client.send_transaction(transaction)
+            response = await self.rpc_client.send_transaction(transaction, *signers)
             
             if hasattr(response, 'value'):
                 return response.value
