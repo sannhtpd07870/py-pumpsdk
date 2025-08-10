@@ -3,6 +3,7 @@ Global account management for PumpDotFun SDK.
 """
 
 import struct
+import base64
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 from solana.publickey import PublicKey
@@ -100,12 +101,17 @@ class GlobalAccountManager:
         try:
             global_account_address = self.get_global_account_address()
             account_info = await self.rpc_client.get_account_info(global_account_address)
-            
+
             if not account_info.value:
                 raise NetworkError("Global account not found")
-            
-            # Parse account data
-            data = self._parse_global_account_data(account_info.value.data)
+
+            raw_data = account_info.value.data
+            if isinstance(raw_data, (list, tuple)):
+                raw_data = base64.b64decode(raw_data[0])
+            elif isinstance(raw_data, str):
+                raw_data = base64.b64decode(raw_data)
+
+            data = self._parse_global_account_data(raw_data)
             
             # Update cache
             self._cached_data = data
