@@ -5,3 +5,4 @@ websockets
 httpx
 construct
 dotenv
+base58
