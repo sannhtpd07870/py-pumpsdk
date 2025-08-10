@@ -124,8 +124,20 @@ async def wait_for_confirmation(
             
             if response.value and response.value[0]:
                 status = response.value[0]
-                if status.confirmation_status and status.confirmation_status.value >= SolanaCommitment(commitment).value:
-                    return True
+                confirm_status = getattr(status, "confirmation_status", None)
+                if confirm_status:
+                    # Support both string statuses and objects with `.value`
+                    confirm_status = getattr(confirm_status, "value", confirm_status)
+                    try:
+                        levels = ["processed", "confirmed", "finalized"]
+                        status_level = levels.index(confirm_status)
+                        required_level = levels.index(SolanaCommitment(commitment))
+                        if status_level >= required_level:
+                            return True
+                    except ValueError:
+                        logger.warning(
+                            f"Unknown confirmation status: {confirm_status}"
+                        )
                     
         except Exception as e:
             logger.warning(f"Error checking transaction status: {e}")

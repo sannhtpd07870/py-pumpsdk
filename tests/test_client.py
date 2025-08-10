@@ -19,7 +19,7 @@ from pumpdotfun_sdk.bonding_curve import BondingCurveCalculator
 from pumpdotfun_sdk.amm import AMMCalculator
 
 
-class TestPumpDotFunSDK(unittest.TestCase):
+class TestPumpDotFunSDK(unittest.IsolatedAsyncioTestCase):
     """Test cases for main SDK functionality."""
     
     def setUp(self):
@@ -251,7 +251,7 @@ class TestEventHandling(unittest.TestCase):
         self.assertIn("timestamp", result)
 
 
-class TestIntegration(unittest.TestCase):
+class TestIntegration(unittest.IsolatedAsyncioTestCase):
     """Integration tests for the SDK."""
     
     def setUp(self):

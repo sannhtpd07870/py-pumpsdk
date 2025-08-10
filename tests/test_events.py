@@ -265,7 +265,7 @@ class TestEventObjectCreation(unittest.TestCase):
             self.event_manager._create_event_object("unknown_event", event_data)
 
 
-class TestEventProcessing(unittest.TestCase):
+class TestEventProcessing(unittest.IsolatedAsyncioTestCase):
     """Test event processing functionality."""
     
     def setUp(self):
@@ -370,7 +370,7 @@ class TestEventProcessing(unittest.TestCase):
             await self.event_manager._process_message(mock_message)
 
 
-class TestEventManagerLifecycle(unittest.TestCase):
+class TestEventManagerLifecycle(unittest.IsolatedAsyncioTestCase):
     """Test EventManager lifecycle management."""
     
     def setUp(self):
