@@ -246,9 +246,9 @@ class TestErrorClasses(unittest.TestCase):
         self.assertIsInstance(error, Exception)
 
 
-class TestAsyncUtils(unittest.TestCase):
+class TestAsyncUtils(unittest.IsolatedAsyncioTestCase):
     """Test async utility functions."""
-    
+
     @patch('pumpdotfun_sdk.utils.asyncio.sleep')
     async def test_wait_for_confirmation_success(self, mock_sleep):
         """Test successful transaction confirmation."""
@@ -258,8 +258,7 @@ class TestAsyncUtils(unittest.TestCase):
         mock_client = AsyncMock()
         mock_response = Mock()
         mock_response.value = [Mock()]
-        mock_response.value[0].confirmation_status = Mock()
-        mock_response.value[0].confirmation_status.value = 1
+        mock_response.value[0].confirmation_status = "finalized"
         mock_client.get_signature_statuses.return_value = mock_response
         
         result = await wait_for_confirmation(

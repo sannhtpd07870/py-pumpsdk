@@ -5,6 +5,7 @@ Event handling for PumpDotFun SDK.
 import asyncio
 import logging
 import inspect
+import time
 from typing import Dict, Callable, Any, Optional, List
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.websocket_api import connect
@@ -177,15 +178,23 @@ class EventManager:
         # This would need to be implemented based on the actual
         # log format from PumpFun program
         try:
-            if hasattr(message, 'result') and message.result:
-                logs = message.result.get('logs', [])
-                
+            result = None
+            if isinstance(message, dict):
+                result = message.get('result')
+            else:
+                result = getattr(message, 'result', None)
+
+            if result:
+                logs = (
+                    result.get('logs', [])
+                    if isinstance(result, dict)
+                    else getattr(result, 'logs', [])
+                )
+
                 for log in logs:
                     if 'Program log:' in log:
-                        # Extract event data from program log
                         log_data = log.split('Program log: ', 1)[1]
-                        
-                        # Parse different event types
+
                         if 'CreateEvent' in log_data:
                             return self._parse_create_event(log_data)
                         elif 'TradeEvent' in log_data:
@@ -208,7 +217,7 @@ class EventManager:
             "symbol": "placeholder",
             "uri": "placeholder",
             "user": "placeholder",
-            "timestamp": int(asyncio.get_event_loop().time())
+            "timestamp": int(time.time())
         }
     
     def _parse_trade_event(self, log_data: str) -> Dict[str, Any]:
@@ -216,11 +225,11 @@ class EventManager:
         return {
             "event_type": PumpFunEventType.TRADE_EVENT.value,
             "mint": "placeholder",
-            "user": "placeholder", 
+            "user": "placeholder",
             "is_buy": True,
             "sol_amount": 0,
             "token_amount": 0,
-            "timestamp": int(asyncio.get_event_loop().time())
+            "timestamp": int(time.time())
         }
     
     def _parse_complete_event(self, log_data: str) -> Dict[str, Any]:
@@ -229,7 +238,7 @@ class EventManager:
             "event_type": PumpFunEventType.COMPLETE_EVENT.value,
             "mint": "placeholder",
             "user": "placeholder",
-            "timestamp": int(asyncio.get_event_loop().time())
+            "timestamp": int(time.time())
         }
     
     def _create_event_object(self, event_type: str, event_data: Dict[str, Any]) -> Any:
