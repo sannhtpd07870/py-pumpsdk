@@ -10,6 +10,7 @@ from .types import (
     PriorityFee,
     TransactionResult,
     PumpFunEventType,
+    BackendType,
     CreateEvent,
     TradeEvent,
     CompleteEvent
@@ -21,9 +22,10 @@ __author__ = "Manus AI"
 __all__ = [
     "PumpDotFunSDK",
     "CreateTokenMetadata",
-    "PriorityFee", 
+    "PriorityFee",
     "TransactionResult",
     "PumpFunEventType",
+    "BackendType",
     "CreateEvent",
     "TradeEvent",
     "CompleteEvent"

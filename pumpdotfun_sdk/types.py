@@ -45,6 +45,12 @@ class PumpFunEventType(Enum):
     COMPLETE_EVENT = "completeEvent"
 
 
+class BackendType(Enum):
+    """Available backends for executing trades."""
+    PUMP_PORTAL = "pump_portal"
+    ON_CHAIN = "on_chain"
+
+
 @dataclass
 class CreateEvent:
     """Token creation event."""
