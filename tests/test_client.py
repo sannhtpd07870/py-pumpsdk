@@ -58,8 +58,6 @@ class TestPumpDotFunSDK(unittest.IsolatedAsyncioTestCase):
             PumpFunEventType.TRADE_EVENT,
             test_callback
         )
-            test_callback 
-        )
         self.assertIsInstance(listener_id, int)
         
         # Remove listener
