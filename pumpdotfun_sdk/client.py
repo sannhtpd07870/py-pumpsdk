@@ -5,11 +5,12 @@ Main client for PumpDotFun SDK.
 import asyncio
 import logging
 from typing import Optional, Dict, Any
+import httpx
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment
 from solana.keypair import Keypair
 from solana.publickey import PublicKey
-from solana.transaction import Transaction
+from solana.transaction import Transaction, TransactionInstruction, AccountMeta
 from solana.system_program import (
     CreateAccountParams,
     TransferParams,
@@ -23,6 +24,7 @@ from .types import (
     PriorityFee,
     TransactionResult,
     PumpFunEventType,
+    BackendType,
     EventCallback,
     DEFAULT_COMMITMENT,
     DEFAULT_SLIPPAGE_BASIS_POINTS
@@ -52,18 +54,24 @@ class PumpDotFunSDK:
         self,
         rpc_endpoint: str,
         websocket_endpoint: Optional[str] = None,
-        commitment: str = DEFAULT_COMMITMENT
+        commitment: str = DEFAULT_COMMITMENT,
+        portal_api_url: str = "https://pumpportal.fun/api",
+        portal_api_key: Optional[str] = None,
     ):
         """
         Initialize PumpDotFun SDK.
-        
+
         Args:
             rpc_endpoint: Solana RPC endpoint URL
             websocket_endpoint: WebSocket endpoint for events (optional)
             commitment: Default commitment level
+            portal_api_url: Base URL for PumpPortal API
+            portal_api_key: Optional API key for PumpPortal
         """
         self.rpc_client = AsyncClient(rpc_endpoint, commitment=Commitment(commitment))
         self.commitment = commitment
+        self.portal_api_url = portal_api_url.rstrip("/")
+        self.portal_api_key = portal_api_key
         
         # Initialize event manager if websocket endpoint provided
         if websocket_endpoint:
@@ -87,6 +95,7 @@ class PumpDotFunSDK:
         priority_fees: Optional[PriorityFee] = None,
         commitment: str = None,
         simulate: bool = False,
+        backend: BackendType = BackendType.ON_CHAIN,
     ) -> TransactionResult:
         """
         Create a new token and buy it immediately.
@@ -118,12 +127,12 @@ class PumpDotFunSDK:
             
             # Step 1: Create the token
             create_result = await self._create_token(
-                creator, mint, token_metadata, commitment, simulate
+                creator, mint, token_metadata, commitment, simulate, backend
             )
-            
+
             if not create_result.success:
                 return create_result
-            
+
             # Step 2: Buy the token
             buy_result = await self.buy(
                 creator,
@@ -133,6 +142,7 @@ class PumpDotFunSDK:
                 priority_fees,
                 commitment,
                 simulate=simulate,
+                backend=backend,
             )
             
             # Combine results
@@ -164,6 +174,7 @@ class PumpDotFunSDK:
         priority_fees: Optional[PriorityFee] = None,
         commitment: str = None,
         simulate: bool = False,
+        backend: BackendType = BackendType.ON_CHAIN,
     ) -> TransactionResult:
         """
         Buy tokens from PumpFun.
@@ -191,6 +202,24 @@ class PumpDotFunSDK:
             buy_amount_lamports = sol_to_lamports(buy_amount_sol)
 
             logger.info(f"Buying {buy_amount_sol} SOL worth of {mint}")
+
+            if backend == BackendType.PUMP_PORTAL:
+                payload = {
+                    "mint": str(mint),
+                    "amount": buy_amount_lamports,
+                    "slippage": slippage_basis_points,
+                }
+                if simulate:
+                    payload["simulate"] = True
+                try:
+                    resp = await self._portal_request("post", "trade/buy", payload)
+                    return TransactionResult(
+                        success=resp.get("success", True),
+                        signature=resp.get("signature"),
+                        results=resp,
+                    )
+                except Exception as e:
+                    return TransactionResult(success=False, error=str(e))
 
             if simulate:
                 transaction = Transaction(fee_payer=buyer.public_key)
@@ -271,6 +300,7 @@ class PumpDotFunSDK:
         commitment: str = None,
         mint_authority: Optional[Keypair] = None,
         simulate: bool = False,
+        backend: BackendType = BackendType.ON_CHAIN,
     ) -> TransactionResult:
         """
         Sell tokens to PumpFun.
@@ -297,6 +327,24 @@ class PumpDotFunSDK:
             commitment = commitment or self.commitment
 
             logger.info(f"Selling {sell_token_amount} tokens of {mint}")
+
+            if backend == BackendType.PUMP_PORTAL:
+                payload = {
+                    "mint": str(mint),
+                    "amount": sell_token_amount,
+                    "slippage": slippage_basis_points,
+                }
+                if simulate:
+                    payload["simulate"] = True
+                try:
+                    resp = await self._portal_request("post", "trade/sell", payload)
+                    return TransactionResult(
+                        success=resp.get("success", True),
+                        signature=resp.get("signature"),
+                        results=resp,
+                    )
+                except Exception as e:
+                    return TransactionResult(success=False, error=str(e))
 
             if simulate:
                 if not mint_authority:
@@ -422,9 +470,31 @@ class PumpDotFunSDK:
         metadata: CreateTokenMetadata,
         commitment: str,
         simulate: bool = False,
+        backend: BackendType = BackendType.ON_CHAIN,
     ) -> TransactionResult:
         """Create a new token."""
         try:
+            if backend == BackendType.PUMP_PORTAL:
+                payload = {
+                    "name": metadata.name,
+                    "symbol": metadata.symbol,
+                    "description": metadata.description,
+                    "image": metadata.image,
+                    "mint": str(mint.public_key),
+                    "creator": str(creator.public_key),
+                }
+                if simulate:
+                    payload["simulate"] = True
+                try:
+                    resp = await self._portal_request("post", "token/create", payload)
+                    return TransactionResult(
+                        success=resp.get("success", True),
+                        signature=resp.get("signature"),
+                        results=resp,
+                    )
+                except Exception as e:
+                    return TransactionResult(success=False, error=str(e))
+
             transaction = Transaction(fee_payer=creator.public_key)
 
             if simulate:
@@ -441,6 +511,16 @@ class PumpDotFunSDK:
                         )
                     )
                 )
+            else:
+                instruction = TransactionInstruction(
+                    program_id=self.PUMP_FUN_PROGRAM_ID,
+                    data=b"create",
+                    keys=[
+                        AccountMeta(pubkey=creator.public_key, is_signer=True, is_writable=True),
+                        AccountMeta(pubkey=mint.public_key, is_signer=True, is_writable=True),
+                    ],
+                )
+                transaction.add(instruction)
 
             signature = await self._send_transaction(transaction, [creator, mint])
 
@@ -454,7 +534,7 @@ class PumpDotFunSDK:
                 error=None if confirmed else "Token creation failed",
                 results={"mint": str(mint.public_key)},
             )
-            
+
         except Exception as e:
             return TransactionResult(success=False, error=str(e))
     
@@ -468,10 +548,16 @@ class PumpDotFunSDK:
     ) -> Transaction:
         """Build buy transaction."""
         transaction = Transaction()
-        
-        # Add PumpFun buy instruction
-        # This would need to be implemented based on actual PumpFun program
-        
+
+        instruction = TransactionInstruction(
+            program_id=self.PUMP_FUN_PROGRAM_ID,
+            data=b"buy",
+            keys=[
+                AccountMeta(pubkey=buyer.public_key, is_signer=True, is_writable=True),
+                AccountMeta(pubkey=mint, is_signer=False, is_writable=True),
+            ],
+        )
+        transaction.add(instruction)
         return transaction
     
     async def _build_sell_transaction(
@@ -484,10 +570,16 @@ class PumpDotFunSDK:
     ) -> Transaction:
         """Build sell transaction."""
         transaction = Transaction()
-        
-        # Add PumpFun sell instruction
-        # This would need to be implemented based on actual PumpFun program
-        
+
+        instruction = TransactionInstruction(
+            program_id=self.PUMP_FUN_PROGRAM_ID,
+            data=b"sell",
+            keys=[
+                AccountMeta(pubkey=seller.public_key, is_signer=True, is_writable=True),
+                AccountMeta(pubkey=mint, is_signer=False, is_writable=True),
+            ],
+        )
+        transaction.add(instruction)
         return transaction
     
     async def _send_transaction(
@@ -511,6 +603,17 @@ class PumpDotFunSDK:
                 
         except Exception as e:
             raise TransactionError(f"Transaction failed: {e}")
+
+    async def _portal_request(self, method: str, endpoint: str, json: Dict[str, Any]) -> Dict[str, Any]:
+        """Send a request to the PumpPortal API."""
+        url = f"{self.portal_api_url}/{endpoint.lstrip('/') }"
+        headers = {}
+        if self.portal_api_key:
+            headers["X-API-KEY"] = self.portal_api_key
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.request(method, url, json=json, headers=headers)
+            response.raise_for_status()
+            return response.json()
     
     async def _get_bonding_curve_account(self, mint: PublicKey) -> BondingCurveAccount:
         """Get bonding curve account for a mint."""

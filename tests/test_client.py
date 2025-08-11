@@ -13,7 +13,12 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from pumpdotfun_sdk import PumpDotFunSDK
-from pumpdotfun_sdk.types import CreateTokenMetadata, PriorityFee, PumpFunEventType
+from pumpdotfun_sdk.types import (
+    CreateTokenMetadata,
+    PriorityFee,
+    PumpFunEventType,
+    BackendType,
+)
 from pumpdotfun_sdk.utils import validate_slippage, sol_to_lamports, format_sol_amount
 from pumpdotfun_sdk.bonding_curve import BondingCurveCalculator
 from pumpdotfun_sdk.amm import AMMCalculator
@@ -51,6 +56,8 @@ class TestPumpDotFunSDK(unittest.IsolatedAsyncioTestCase):
         # Add listener
         listener_id = self.sdk.add_event_listener(
             PumpFunEventType.TRADE_EVENT,
+            test_callback
+        )
             test_callback 
         )
         self.assertIsInstance(listener_id, int)
@@ -81,6 +88,19 @@ class TestPumpDotFunSDK(unittest.IsolatedAsyncioTestCase):
         )
         self.assertFalse(result.success)
         self.assertIn("must be positive", result.error)
+
+    @patch.object(PumpDotFunSDK, "_portal_request", new_callable=AsyncMock)
+    async def test_buy_pumpportal_backend(self, mock_portal):
+        """Ensure buy uses PumpPortal backend when selected."""
+        mock_portal.return_value = {"success": True, "signature": "sig"}
+        result = await self.sdk.buy(
+            buyer=self.test_keypair,
+            mint=self.test_mint.public_key,
+            buy_amount_sol=1.0,
+            backend=BackendType.PUMP_PORTAL,
+        )
+        self.assertTrue(result.success)
+        mock_portal.assert_called()
 
 
 class TestUtilityFunctions(unittest.TestCase):
